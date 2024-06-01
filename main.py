@@ -42,7 +42,7 @@ with app.app_context():
 def home():
     try:
         if not session.get('user'):
-            return redirect(url_for('login'))
+            return redirect(url_for('login', langg = 'English'))
         else:
             return redirect(url_for('user'))
     except Exception as e:
@@ -80,7 +80,7 @@ def user():
 @app.route('/logout')
 def logout():
     session.pop('user', None)
-    return redirect(url_for('login'))
+    return redirect(url_for('login', langg = 'English'))
 
 
 @app.route('/movies', methods=['GET', 'POST'])

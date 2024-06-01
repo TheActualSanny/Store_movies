@@ -2,6 +2,7 @@ from flask import Flask, redirect, url_for, render_template, request, session
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from movie_api import MovieFinder
+from flask import flash
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'register'
@@ -38,20 +39,33 @@ with app.app_context():
 
 @app.route('/')
 def home():
-    return redirect(url_for('login'))
+    try:
+        if not session.get('user'):
+            return redirect(url_for('login'))
+        else:
+            return redirect(url_for('user'))
+    except Exception as e:
+        flash(f'An error occurred: {e}')
+        return render_template('error.html')
+
 
 @app.route('/login', methods=['POST', 'GET'])
 def login():
-    '''The URL used for logging in. If the user inputs incorrect credentials, for now, it only returns a blank screen with: "invalid username or password"'''
-
-    if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        if Accounts.query.filter_by(username=username, password=password).first():
-            session['user'] = username
-            return redirect(url_for('user'))
-        return 'Invalid username or password'
+        try:
+            user = Accounts.query.filter_by(username=username, password=password).first()
+            if user:
+                session['user'] = username
+                return redirect(url_for('user'))
+            else:
+                flash('Invalid username or password')
+                return render_template('login.html')
+        except Exception as e:
+            flash(f'An error occurred: {e}')
+            return render_template('login.html')
     return render_template('login.html')
+
 
 @app.route('/user')
 def user():
@@ -66,43 +80,64 @@ def logout():
     return redirect(url_for('login'))
 
 
-
 @app.route('/movies', methods=['GET', 'POST'])
 def movies():
-    '''The user can add the movies on this page'''
-
-    if request.method=='POST':
+    if request.method == 'POST':
         title = request.form['title']
-        director = request.form['director']
         releasedate = request.form['releasedate']
         rating = request.form['rating']
-        movie1 = Movies(movie_title = title, director = director, release_date = releasedate, rating = rating, account_name=session['user'])
-        db.session.add(movie1)
-        db.session.commit()
-        return 'Movie successfully added.'
-
+        try:
+            if not title or not releasedate or not rating:
+                flash('All fields are required')
+                return render_template('movies.html')
+            movie1 = Movies(movie_title=title, release_date=releasedate, rating=rating, account_name=session['user'])
+            db.session.add(movie1)
+            db.session.commit()
+            flash('Movie successfully added.')
+            return render_template('movies.html')
+        except Exception as e:
+            flash(f'An error occurred: {e}')
+            return render_template('movies.html')
     return render_template('movies.html')
+@app.route('/register', methods=['POST', 'GET'])
+
+
 
 @app.route('/register', methods=['POST', 'GET'])
 def register():
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
-        if Accounts.query.filter_by(username=username).first():
-            return 'Username already exists'
-        new_user = Accounts(username=username, password=password, creation_date=str(datetime.now()))
-        db.session.add(new_user)
-        db.session.commit()
-        return redirect(url_for('login'))
+        try:
+            if not username or not password:
+                flash('Username and password are required')
+                return render_template('register.html')
+            if Accounts.query.filter_by(username=username).first():
+                flash('Username already exists')
+                return render_template('register.html')
+            new_user = Accounts(username=username, password=password, creation_date=str(datetime.now()))
+            db.session.add(new_user)
+            db.session.commit()
+            flash('Registration successful. Please log in.')
+            return render_template('login.html')
+        except Exception as e:
+            flash(f'An error occurred: {e}')
+            return render_template('register.html')
     return render_template('register.html')
 
-@app.route('/recommendations', methods = ['GET', 'POST'])
+
+@app.route('/recommendations', methods=['GET', 'POST'])
 def recommendation_page():
     if request.method == 'POST':
         movie_name = request.form['moviename']
-        data = api.search_func(movie_name)
-        return render_template('add_movies.html',  recommendations = api.parse_moviedata(data))
-    return render_template('add_movies.html',  recommendations = [])
+        try:
+            data = api.search_func(movie_name)
+            recommendations = api.parse_moviedata(data)
+            return render_template('add_movies.html', recommendations=recommendations)
+        except Exception as e:
+            flash(f'An error occurred: {e}')
+            return render_template('add_movies.html')
+    return render_template('add_movies.html', recommendations=[])
 
 if __name__ == "__main__":
     app.run(debug=True)

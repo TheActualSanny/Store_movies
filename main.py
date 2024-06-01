@@ -3,6 +3,8 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from movie_api import MovieFinder
 from flask import flash
+from functions import validate_form, validate_password
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'register'
@@ -45,7 +47,7 @@ def home():
             return redirect(url_for('user'))
     except Exception as e:
         flash(f'An error occurred: {e}')
-        return render_template('error.html')
+        return render_template('login.html', langg = 'English')
 
 
 @app.route('/login/<langg>', methods=['POST', 'GET'])   
@@ -55,8 +57,8 @@ def login(langg):
             username = request.form['username']
             password = request.form['password']
             try:
-                user = Accounts.query.filter_by(username=username, password=password).first()
-                if user:
+                user = Accounts.query.filter_by(username=username).first()
+                if user and check_password_hash(user.password, password):
                     session['user'] = username
                     return redirect(url_for('user'))
                 else:
@@ -118,11 +120,15 @@ def register(langg):
             if Accounts.query.filter_by(username=username).first():
                 flash('Username already exists')
                 return render_template('register.html')
-            new_user = Accounts(username=username, password=password, creation_date=str(datetime.now()))
+            if not validate_password(password):
+                flash('Password does not meet the requirements! Please input a new one...')
+                return render_template('register.html', lang = langg)
+            hashed_password = generate_password_hash(password, method='sha256')
+            new_user = Accounts(username=username, password=hashed_password, creation_date=str(datetime.now()))
             db.session.add(new_user)
             db.session.commit()
             flash('Registration successful. Please log in.')
-            return render_template('login.html')
+            return redirect(url_for('login', langg = 'English'))
         except Exception as e:
             flash(f'An error occurred: {e}')
             return render_template('register.html', lang = langg)
@@ -135,10 +141,17 @@ def recommendation_page():
     
     if request.method == 'POST':
         movie_name = request.form['moviename']
+        genre = request.form.get('filter-by-genre')
+        release = request.form.get('filter-by-release')
+        rating = request.form.get('filter-by-rating')
         try:
-            data = api.search_func(movie_name)
-            recommendations = api.parse_moviedata(data)
-            return render_template('add_movies.html', recommendations=recommendations)
+            result = validate_form({movie_name: api.search_func, genre : api.filter_genre, release : api.filter_year, rating : api.filter_rating}) 
+            if not result:
+                flash('You gave multiple inputs. Please choose one (Movie name or a single filter option)')
+                return render_template('add_movies.html')
+            data = result[1](result[0]) 
+            flash('found movies')
+            return render_template('add_movies.html',  recommendations = api.parse_moviedata(data))
         except Exception as e:
             flash(f'An error occurred: {e}')
             return render_template('add_movies.html')

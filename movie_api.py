@@ -32,7 +32,11 @@ class MovieFinder:
         data = requests.get('https://moviesminidatabase.p.rapidapi.com/movie/byYear/{}/'.format(year), headers = self._headers)
         return data.json()
     
-    
+    def filter_rating(self, year):
+        '''Filters movies based on rating'''
+        data = requests.get('https://moviesminidatabase.p.rapidapi.com/movie/byContentRating/{}/'.format(year), headers = self._headers)
+        return data.json()
+     
     def parse_moviedata(self, data):
         '''The main method which is used to parse the movies, it utilized their IDs to do so.'''
 

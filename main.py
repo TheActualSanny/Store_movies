@@ -91,6 +91,9 @@ def movies():
         title = request.form['title']
         releasedate = request.form['releasedate']
         rating = request.form['rating']
+        if not isinstance(releasedate, int) or not isinstance(rating, float):  
+            flash('Please input correct data types!')  
+            return render_template('movies.html')
         try:
             if not title or not releasedate or not rating:
                 flash('All fields are required')
@@ -144,12 +147,18 @@ def recommendation_page():
         genre = request.form.get('filter-by-genre')
         release = request.form.get('filter-by-release')
         rating = request.form.get('filter-by-rating')
+        if not isinstance(movie_name, str):         
+                flash('Please input correct data types!')  
+                return render_template('add_movies.html', recommendations=[]) 
         try:
             result = validate_form({movie_name: api.search_func, genre : api.filter_genre, release : api.filter_year, rating : api.filter_rating}) 
             if not result:
                 flash('You gave multiple inputs. Please choose one (Movie name or a single filter option)')
                 return render_template('add_movies.html')
             data = result[1](result[0]) 
+            if not data:
+                flash('Please input correct data types!')
+                return render_template('add_movies.html',  recommendations = [])
             flash('found movies')
             return render_template('add_movies.html',  recommendations = api.parse_moviedata(data))
         except Exception as e:
@@ -160,3 +169,4 @@ def recommendation_page():
 
 if __name__ == "__main__":
     app.run(debug=True)
+

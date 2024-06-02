@@ -24,16 +24,22 @@ class MovieFinder:
 
     def filter_genre(self, genre = 'Action'):
         '''Filters by genre of the movie'''
+        if not isinstance(genre, str):
+            return
         data = requests.get('https://moviesminidatabase.p.rapidapi.com/movie/byGen/{}/'.format(genre), headers = self._headers)
         return data.json()
     
     def filter_year(self, year):
         '''Filters by the release year'''
+        if not isinstance(year, int):
+            return
         data = requests.get('https://moviesminidatabase.p.rapidapi.com/movie/byYear/{}/'.format(year), headers = self._headers)
         return data.json()
     
     def filter_rating(self, year):
         '''Filters movies based on rating'''
+        if not isinstance(year, float) and not isinstance(year, int):
+            return
         data = requests.get('https://moviesminidatabase.p.rapidapi.com/movie/byContentRating/{}/'.format(year), headers = self._headers)
         return data.json()
      
